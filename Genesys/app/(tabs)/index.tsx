@@ -66,7 +66,7 @@ export default function LoginScreen() {
     iosClientId: "731720654700-vossos-ids.apps.googleusercontent.com",
     webClientId: "642421745104-5b5lhva0c32t6rfl72elovp71ojcl432.apps.googleusercontent.com",
   },{
-      useProxy: true, // Importante para funcionar no Expo Go
+    useProxy: true, // Importante para funcionar no Expo Go
   }
 );
 
