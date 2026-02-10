@@ -183,7 +183,7 @@ const handleAuth = async () => {
           
           <View style={styles.header}>
             <Ionicons name="fitness" size={70} color="#FFD700" />
-            <ThemedText type="title" style={styles.mainTitle}>GenesysFitSys</ThemedText>
+            <ThemedText type="title" style={styles.mainTitle}>Genesys</ThemedText>
             <ThemedText style={styles.subtitle}>Sua evolução começa aqui.</ThemedText>
           </View>
 
@@ -222,10 +222,10 @@ const handleAuth = async () => {
               {loading ? <ActivityIndicator color="#122620" /> : <ThemedText style={styles.buttonLabel}>{isLogin ? 'ENTRAR' : 'COMEÇAR JORNADA'}</ThemedText>}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.googleButton} onPress={() => promptAsync()} disabled={!request || loading}>
+            {/* <TouchableOpacity style={styles.googleButton} onPress={() => promptAsync()} disabled={!request || loading}>
               <Ionicons name="logo-google" size={20} color="#ea4335" />
               <ThemedText style={styles.googleButtonLabel}>Google Sign In</ThemedText>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </ThemedView>
       </ScrollView>
@@ -235,15 +235,15 @@ const handleAuth = async () => {
 
 const styles = StyleSheet.create({
   scrollContainer: { flexGrow: 1 },
-  container: { flex: 1, backgroundColor: '#122620', padding: 30, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: 35 },
+  container: { flex: 1, backgroundColor: '#123c2f', padding: 30, justifyContent: 'center' },
+  header: { position: 'fixed', alignItems: 'center', marginBottom: 35 },
   mainTitle: { fontSize: 34, fontWeight: '900', color: '#FFD700', marginTop: 10 },
   subtitle: { fontSize: 14, color: '#fff', opacity: 0.8 },
   tabBar: { flexDirection: 'row', marginBottom: 25, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', padding: 4 },
   tabBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 10 },
-  activeTabBtn: { backgroundColor: '#FFD700' },
-  tabText: { fontWeight: 'bold', color: '#fff' },
-  activeTabText: { color: '#122620' },
+  activeTabBtn: { backgroundColor: '#123600' },
+  tabText: { fontWeight: 'bold', color: '#ebd86e' },
+  activeTabText: { color: '#ebd86e' },
   inputArea: { gap: 12 },
   inputBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 15, height: 60, backgroundColor: '#fff' },
   inputField: { flex: 1, marginLeft: 12, fontSize: 16, color: '#000' },
