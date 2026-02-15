@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { gerarTreinoIA } from '../../services/gemini';
+import { DrawerMenu } from '@/components/drawer-menu';
 
 
 const { width } = Dimensions.get('window');
@@ -21,6 +22,7 @@ export default function HomePage() {
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
   // Estados para IA
   const [aiResponse, setAIResponse] = useState("");
   const [loadingIA, setLoadingAI] = useState(false);
@@ -89,7 +91,7 @@ export default function HomePage() {
   };
 
   const finishWorkout = async () => {
-    if (seconds < 10) return Alert.alert("Muito rápido!", "Treine um pouco mais para ganhar XP.");
+    if (seconds < 100) return Alert.alert("Muito rápido!", "Treine um pouco mais para ganhar XP.");
     setIsTraining(false);
     setSaving(true);
     try {
@@ -139,6 +141,9 @@ export default function HomePage() {
 
         {/* HEADER */}
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => setShowDrawer(true)}>
+            <Ionicons name="menu" size={28} color="#FFD700" />
+          </TouchableOpacity>
           <View>
             <ThemedText style={styles.welcomeText}>Bem-vindo, guerreiro</ThemedText>
             <ThemedText type="title" style={styles.userName}>{userData?.username || 'Usuário'}</ThemedText>
@@ -197,7 +202,7 @@ export default function HomePage() {
               <ThemedText style={[styles.workoutTitle, { color: '#FFD700' }]}>{formatTime(seconds)}</ThemedText>
               <ThemedText style={{ color: '#94a3b8' }}>Em movimento...</ThemedText>
             </View>
-            <TouchableOpacity style={styles.stopButton} onPress={() => Alert.alert("Personal IA", "Gerando seu treino personalizado...")}>
+            <TouchableOpacity style={styles.stopButton} onPress={finishWorkout}>
               <Ionicons name="stop" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -245,12 +250,15 @@ export default function HomePage() {
           </View>
         </View>
       </Modal>
+
+      {/* Menu Drawer */}
+      <DrawerMenu visible={showDrawer} onClose={() => setShowDrawer(false)} />
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617' }, // Fundo Obsidian
+  container: { flex: 1, backgroundColor: '#072018' }, // Fundo Obsidian
   scrollContent: {
     padding: 20,
     paddingTop: 50,
