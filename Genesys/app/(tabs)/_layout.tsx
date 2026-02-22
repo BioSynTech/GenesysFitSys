@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { initializeApp, getApps, getApp } from 'firebase/app';
+
 import { 
   getAuth, 
   initializeAuth, 
