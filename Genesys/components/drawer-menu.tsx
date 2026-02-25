@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from './themed-text';
 import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
+import iconSet from '@expo/vector-icons/build/Fontisto';
+
 
 const { width } = Dimensions.get('window');
 
@@ -54,10 +56,10 @@ export function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
     { label: 'Ranking', icon: 'trophy', route: '/(tabs)/Ranking', emoji: '👑' },
     { label: 'Cronômetro', icon: 'timer', route: '/(tabs)/cronometro', emoji: '⏱️' },
     { label: 'Dieta', icon: 'nutrition', route: '/(tabs)/dieta', emoji: '🥗' },
-    { label: 'Gamificação', icon: 'trophy', route: '/(tabs)/gamificacao', emoji: '🎮' },
     { label: 'Pesquisa', icon: 'search', route: '/(tabs)/pesquisa', emoji: '🔍' },
     { label: 'Explorar', icon: 'compass', route: '/(tabs)/explore', emoji: '🗺️' },
     { label: 'Ponto', icon: 'location', route: '/(tabs)/ponto', emoji: '📍' },
+    { label: 'Perfil', icon: 'trophy', route: '/(tabs)/gamificacao', emoji: '👤' },
     { label: 'Configurações', icon: 'settings', route: '/(tabs)/config', emoji: '⚙️' },
   ];
 
@@ -131,7 +133,7 @@ export function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
               <ThemedText style={styles.sectionTitle}>INFORMAÇÕES</ThemedText>
               <View style={styles.infoBox}>
                 <View style={styles.infoItem}>
-                  <Ionicons name="flash" size={18} color="#FFD700" />
+                  <Ionicons name="sparkles" size={18} color="#FFD700" />
                   <View>
                     <ThemedText style={styles.infoLabel}>XP</ThemedText>
                     <ThemedText style={styles.infoValue}>
@@ -141,7 +143,7 @@ export function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
                 </View>
                 <View style={styles.infoDivider} />
                 <View style={styles.infoItem}>
-                  <Ionicons name="star" size={18} color="#FFD700" />
+                  <Ionicons name="flash" size={18} color="#FFD700" />
                   <View>
                     <ThemedText style={styles.infoLabel}>Moedas</ThemedText>
                     <ThemedText style={styles.infoValue}>
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderRightWidth: 2,
     borderRightColor: '#FFD700',
-    paddingTop: 0,
+    paddingTop: -10,
     flexDirection: 'column',
   },
   
@@ -241,6 +243,7 @@ const styles = StyleSheet.create({
   section: {
     paddingVertical: 12,
     paddingHorizontal: 12,
+    bottom: 23,
     marginBottom: 8,
   },
   sectionTitle: {
@@ -319,6 +322,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: '#1e293b',
     paddingHorizontal: 12,
+    bottom: 23,
     paddingVertical: 12,
   },
   logoutItem: {

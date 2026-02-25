@@ -26,7 +26,7 @@ export default function ConfigScreen() {
                 {/* Cabeçalho */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => setShowDrawer(true)}>
-                        <Ionicons name="menu" size={32} color={Colors.gold} />
+                        <Ionicons name="menu" size={38} color={Colors.gold} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>CONFIGURAÇÕES</Text>
                     <View style={{ width: 32 }} /> 

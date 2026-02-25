@@ -79,7 +79,7 @@ export default function ShopScreen() {
       headerImage={
         <View style={styles.headerContainer}>
           <TouchableOpacity onPress={() => setShowDrawer(true)} style={styles.menuIcon}>
-            <Ionicons name="menu" size={32} color="#FFD700" />
+            <Ionicons name="menu" size={38} color="#FFD700" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Ionicons name="cart" size={100} color="#FFD700" />

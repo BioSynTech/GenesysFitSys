@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth, signOut } from "firebase/auth";
-import { getFirestore, doc, onSnapshot, updateDoc, increment, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, updateDoc, increment } from "firebase/firestore";
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -12,7 +12,23 @@ import { Colors } from "../../constants/colors";
 
 const { width } = Dimensions.get('window');
 
-// Sistema de Ranks baseado em Nível
+// Sistema de Biotipo baseado no IMC
+
+const Biotipo = [
+  { nome: "Ectomorfo", descricao: "Corpo magro, dificuldade para ganhar peso e massa muscular." },
+  { nome: "Mesomorfo", descricao: "Corpo atlético, facilidade para ganhar massa muscular e perder gordura." },
+  { nome: "Endomorfo", descricao: "Corpo mais arredondado, tendência a acumular gordura, mas facilidade para ganhar massa muscular." },
+];
+
+
+const getBiotipo = (peso: number, altura: number): string => {
+  const imc = peso / (altura * altura);
+  if (imc < 19) return "Ectomorfo";
+  if (imc >= 19 && imc < 26) return "Mesomorfo";
+  return "Endomorfo";
+}
+
+// Sistema de Ranks
 const RANK_SYSTEM = [
   { min: 1, max: 5, name: "Aprendiz" },
   { min: 6, max: 10, name: "Rank E" },
@@ -45,53 +61,37 @@ export default function HomePage() {
   const [loadingIA, setLoadingAI] = useState(false);
   const [aiResponse, setAIResponse] = useState("");
 
-  // Estados do Treino
   const [isTraining, setIsTraining] = useState(false);
   const [seconds, setSeconds] = useState(0);
 
   const xpLimite = 1000;
 
-  // Monitor de Dados e Level Up
   useEffect(() => {
     if (auth.currentUser) {
       const unsub = onSnapshot(doc(db, "users", auth.currentUser.uid), (snapshot) => {
         const data = snapshot.data();
         if (data) {
           setUserData(data);
-          
-          // Verifica se precisa configurar perfil
           if (!data.peso || !data.altura) setShowWelcome(true);
-
-          // Lógica de Ofensiva
           checkStreak(data);
-
-          // Lógica de Level Up com XP acumulado
-          if (data.xp >= xpLimite) {
-            handleLevelUp(data.level || 1, data.xp);
-          }
+          if (data.xp >= xpLimite) handleLevelUp(data.level || 1, data.xp);
         }
       });
       return () => unsub();
     }
   }, []);
 
-  // Lógica para validar ofensiva
   const checkStreak = async (data: any) => {
     if (!data.lastWorkoutDate) return;
-    
     const hoje = new Date().toISOString().split('T')[0];
     const ultimaData = data.lastWorkoutDate;
-    
-    // Calcula diferença de dias
     const diffInDays = Math.floor((new Date(hoje).getTime() - new Date(ultimaData).getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffInDays > 1 && data.streak > 0) {
-      // Perdeu a ofensiva! Reset no Firebase
       await updateDoc(doc(db, "users", auth.currentUser!.uid), { streak: 0 });
     }
   };
 
-  // Cronômetro do Treino
   useEffect(() => {
     let interval: any;
     if (isTraining) {
@@ -105,14 +105,14 @@ export default function HomePage() {
   const handleLevelUp = async (currentLevel: number, currentXp: number) => {
     const userRef = doc(db, "users", auth.currentUser!.uid);
     const newLevel = currentLevel + 1;
-    const sobraXP = currentXp - xpLimite; // Mantém o XP que passou do limite
+    const sobraXP = currentXp - xpLimite;
 
     await updateDoc(userRef, {
       level: newLevel,
       xp: sobraXP,
       rank: getRank(newLevel)
     });
-    Alert.alert("LEVEL UP! 🎊", `O Sistema reconheceu sua evolução. Você atingiu o nível ${newLevel}! Rank: ${getRank(newLevel)}`);
+    Alert.alert("LEVEL UP! 🎊", `O Sistema reconheceu sua evolução para o nível ${newLevel}!`);
   };
 
   const handleAiConsult = async () => {
@@ -123,14 +123,14 @@ export default function HomePage() {
       setAIResponse(response);
       Alert.alert("Personal IA 🤖", response);
     } catch (error) {
-      Alert.alert("Erro", "O Sistema de IA está instável. Tente novamente.");
+      Alert.alert("Erro", "Falha na conexão com o Sistema.");
     } finally {
       setLoadingAI(false);
     }
   };
 
   const finishWorkout = async () => {
-    if (seconds < 60) return Alert.alert("Treino muito curto", "O Sistema exige pelo menos 1 minuto de esforço para validar XP.");
+    if (seconds < 60) return Alert.alert("Aviso", "Treine por pelo menos 1 minuto para validar a missão.");
     
     setIsTraining(false);
     setSaving(true);
@@ -141,16 +141,37 @@ export default function HomePage() {
       await updateDoc(userRef, {
         xp: increment(150),
         moedas: increment(30),
-        streak: increment(userData?.lastWorkoutDate === hoje ? 0 : 1), // Só aumenta streak 1x por dia
+        streak: increment(userData?.lastWorkoutDate === hoje ? 0 : 1),
         lastWorkoutDate: hoje
       });
       
       setSeconds(0);
-      Alert.alert("Missão Cumprida!", "Você ganhou 150 XP e 30 Moedas!");
+      Alert.alert("Missão Cumprida!", "XP e Moedas creditados.");
     } catch (e) {
-      Alert.alert("Erro", "Falha ao salvar progresso.");
+      Alert.alert("Erro", "Erro ao salvar progresso.");
     } finally { 
         setSaving(false); 
+    }
+  };
+
+  const handleFirstUpdate = async () => {
+    if(!peso || !altura) return Alert.alert("Aviso", "Preencha todos os campos.");
+    setSaving(true);
+    const p = parseFloat(peso.replace(',', '.'));
+    const a = parseFloat(altura.replace(',', '.'));
+    const biotipo = getBiotipo(p, a);
+
+    try {
+      await updateDoc(doc(db, "users", auth.currentUser!.uid), {
+        peso: p,
+        altura: a,
+        biotipo: biotipo
+      });
+      setShowWelcome(false);
+    } catch (error) {
+      Alert.alert("Erro", "Falha ao sincronizar dados.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -169,11 +190,11 @@ export default function HomePage() {
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setShowDrawer(true)}>
-            <Ionicons name="menu" size={28} color="#FFD700" />
+            <Ionicons name="menu" size={38} color="#FFD700" />
           </TouchableOpacity>
           <View>
-            <ThemedText style={styles.welcomeText}>Bem-vindo, guerreiro</ThemedText>
-            <ThemedText type="title" style={styles.userName}>{userData?.username || 'Usuário'}</ThemedText>
+            <ThemedText style={styles.welcomeText}>Status do Jogador</ThemedText>
+            <ThemedText type="title" style={styles.userName}>{userData?.username || 'Guerreiro'}</ThemedText>
           </View>
           <View style={styles.headerRight}>
             <View style={styles.coinContainer}>
@@ -191,7 +212,7 @@ export default function HomePage() {
         <View style={styles.levelCard}>
           <View style={styles.levelHeader}>
             <ThemedText style={styles.levelLabel}>NÍVEL {userData?.level || 1}</ThemedText>
-            <ThemedText style={styles.levelLabel}>{userData?.rank || "Iniciante"}</ThemedText>
+            <ThemedText style={styles.levelLabel}>{userData?.rank || "Aprendiz"}</ThemedText>
             <ThemedText style={styles.xpLabel}>{userData?.xp || 0} / {xpLimite} XP</ThemedText>
           </View>
           <View style={styles.xpBarBackground}>
@@ -202,12 +223,17 @@ export default function HomePage() {
         {/* STATUS GRID */}
         <View style={styles.statusGrid}>
           <View style={styles.statBox}>
-            <Ionicons name="speedometer-outline" size={22} color="#FFD700" />
+            <Ionicons name="body-outline" size={20} color="#FFD700" />
+            <ThemedText style={styles.statValue}>{userData?.biotipo || '--'}</ThemedText>
+            <ThemedText style={styles.statLabel}>Biotipo</ThemedText>
+          </View>
+          <View style={styles.statBox}>
+            <Ionicons name="speedometer-outline" size={20} color="#FFD700" />
             <ThemedText style={styles.statValue}>{userData?.peso || '--'} kg</ThemedText>
             <ThemedText style={styles.statLabel}>Peso</ThemedText>
           </View>
           <View style={styles.statBox}>
-            <Ionicons name="resize-outline" size={22} color="#FFD700" />
+            <Ionicons name="resize-outline" size={20} color="#FFD700" />
             <ThemedText style={styles.statValue}>{userData?.altura || '--'} m</ThemedText>
             <ThemedText style={styles.statLabel}>Altura</ThemedText>
           </View>
@@ -254,13 +280,9 @@ export default function HomePage() {
                 CONSELHO DO SISTEMA (IA)
               </ThemedText>
             </View>
-            {loadingIA ? (
-              <ActivityIndicator color="#FFD700" style={{ marginVertical: 10 }} />
-            ) : (
-              <ThemedText style={styles.aiText}>
-                {aiResponse || "Toque para gerar um treino estratégico baseado no seu nível atual."}
-              </ThemedText>
-            )}
+            <ThemedText style={styles.aiText}>
+              {loadingIA ? "Sincronizando com o Sistema..." : (aiResponse || "Toque para gerar um treino estratégico baseado no seu nível.")}
+            </ThemedText>
           </View>
         </TouchableOpacity>
 
@@ -273,35 +295,11 @@ export default function HomePage() {
             <Ionicons name="shield-checkmark" size={60} color="#FFD700" />
             <ThemedText style={styles.modalTitle}>Identificação do Jogador</ThemedText>
             <View style={styles.modalInputArea}>
-              <TextInput 
-                style={styles.modalInput} 
-                placeholder="Peso atual (kg)" 
-                placeholderTextColor="#64748b" 
-                keyboardType="numeric" 
-                onChangeText={setPeso} 
-              />
-              <TextInput 
-                style={styles.modalInput} 
-                placeholder="Altura (ex: 1.75)" 
-                placeholderTextColor="#64748b" 
-                keyboardType="numeric" 
-                onChangeText={setAltura} 
-              />
+              <TextInput style={styles.modalInput} placeholder="Peso (ex: 75.5)" placeholderTextColor="#64748b" keyboardType="numeric" onChangeText={setPeso} />
+              <TextInput style={styles.modalInput} placeholder="Altura (ex: 1.75)" placeholderTextColor="#64748b" keyboardType="numeric" onChangeText={setAltura} />
             </View>
-            <TouchableOpacity 
-                style={styles.saveButton} 
-                onPress={async () => {
-                    if(!peso || !altura) return Alert.alert("Aviso", "Preencha todos os campos.");
-                    setSaving(true);
-                    await updateDoc(doc(db, "users", auth.currentUser!.uid), {
-                        peso: parseFloat(peso),
-                        altura: parseFloat(altura)
-                    });
-                    setSaving(false);
-                    setShowWelcome(false);
-                }}
-            >
-              <ThemedText style={styles.saveButtonText}>CONFIRMAR STATUS</ThemedText>
+            <TouchableOpacity style={styles.saveButton} onPress={handleFirstUpdate} disabled={saving}>
+              {saving ? <ActivityIndicator color="#020617" /> : <ThemedText style={styles.saveButtonText}>CONFIRMAR STATUS</ThemedText>}
             </TouchableOpacity>
           </View>
         </View>
@@ -329,10 +327,10 @@ const styles = StyleSheet.create({
   xpBarBackground: { height: 8, backgroundColor: '#1e293b', borderRadius: 4, overflow: 'hidden' },
   xpBarFill: { height: '100%', backgroundColor: '#FFD700' },
 
-  statusGrid: { flexDirection: 'row', gap: 12, marginBottom: 25 },
-  statBox: { flex: 1, backgroundColor: '#0f172a', padding: 15, borderRadius: 18, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: '#FFD700' },
-  statValue: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginTop: 5 },
-  statLabel: { color: '#64748b', fontSize: 10, textTransform: 'uppercase' },
+  statusGrid: { flexDirection: 'row', gap: 10, marginBottom: 25 },
+  statBox: { flex: 1, backgroundColor: '#0f172a', padding: 12, borderRadius: 18, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: '#FFD700' },
+  statValue: { color: '#fff', fontSize: 15, fontWeight: 'bold', marginTop: 5, textAlign: 'center' },
+  statLabel: { color: '#64748b', fontSize: 9, textTransform: 'uppercase', marginTop: 2 },
 
   sectionTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 15, letterSpacing: 1 },
   workoutAction: { backgroundColor: '#FFD700', borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center' },
@@ -351,6 +349,6 @@ const styles = StyleSheet.create({
   modalTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginVertical: 15, textAlign: 'center' },
   modalInputArea: { width: '100%', gap: 15, marginBottom: 25 },
   modalInput: { backgroundColor: '#020617', color: '#fff', padding: 18, borderRadius: 15, borderWidth: 1, borderColor: '#1e293b', fontSize: 16 },
-  saveButton: { backgroundColor: '#FFD700', padding: 20, borderRadius: 15, width: '100%', alignItems: 'center', elevation: 5 },
+  saveButton: { backgroundColor: '#FFD700', padding: 20, borderRadius: 15, width: '100%', alignItems: 'center' },
   saveButtonText: { fontWeight: '900', color: '#020617', fontSize: 16 }
 });

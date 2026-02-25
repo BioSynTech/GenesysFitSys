@@ -37,7 +37,7 @@ export default function CronometroScreen() {
       {/* Cabeçalho */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setShowDrawer(true)} style={styles.menuIcon}>
-          <Ionicons name="menu" size={32} color="#FFD700" />
+          <Ionicons name="menu" size={38} color="#FFD700" />
         </TouchableOpacity>
       </View>
 

@@ -1,169 +1,220 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Modal, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../constants/colors";
-import { useXpSystem } from "../../constants/xpSystem";
 import { DrawerMenu } from "../../components/drawer-menu";
-import { getFirestore, doc, onSnapshot, updateDoc, increment } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-const treinosPorGrupo: Record<string, string[]> = {
-  Peito: ["Supino com Barra", "Supino Inclinado", "Fly na Máquina"],
-  Braços: ["Rosca Direta", "Tríceps Testa", "Flexão de Braço"],
-  Pernas: ["Agachamento Livre", "Leg Press", "Avanço"],
-  Costas: ["Remada Curvada", "Barra Fixa", "Pulldown"],
-  Ombros: ["Desenvolvimento com Halteres", "Elevação Lateral", "Arnold Press"],
-  Abdômen: ["Prancha", "Abdominal Supra", "Abdominal Oblíquo"],
-};
+const { width } = Dimensions.get('window');
 
-const treinosDetalhados: Record<string, string[]> = {
-  supino: ["Deite-se no banco...", "Segure a barra...", "Desça até o peito.", "Empurre para cima."],
-  agachamento: ["Pés na largura dos ombros.", "Flexione os joelhos.", "Ângulo de 90°.", "Suba lentamente."],
-  flexao: ["Barriga para baixo.", "Mãos na largura dos ombros.", "Corpo reto.", "Suba estendendo braços."]
+const exerciciosDisponiveis: Record<string, string[]> = {
+  Peito: ["Supino Barra", "Supino Halter", "Crucifixo", "Cross Over", "Flexão"],
+  Braços: ["Rosca Direta", "Rosca Martelo", "Tríceps Corda", "Tríceps Testa", "Rosca Scott"],
+  Pernas: ["Agachamento", "Leg Press", "Extensora", "Flexora", "Afundo"],
+  Costas: ["Puxada Frente", "Remada Baixa", "Remada Unilateral", "Barra Fixa", "Levantamento Terra"],
+  Ombros: ["Desenvolvimento Halter", "Elevação Lateral", "Elevação Frontal", "Face Pull"],
 };
 
 export default function TreinosScreen() {
   const auth = getAuth();
   const db = getFirestore();
-  const [selecionado, setSelecionado] = useState<string | null>(null);
-  const [busca, setBusca] = useState("");
   const [userData, setUserData] = useState<any>(null);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [resultado, setResultado] = useState<string[] | null>(null);
   
-  const { xp, nivel, xpNecessario, rankAtual, ganharXp } = useXpSystem();
+  const [modalCriar, setModalCriar] = useState(false);
+  const [modalView, setModalView] = useState<any>(null);
+  const [nomeRotina, setNomeRotina] = useState("");
+  const [exerciciosSelecionados, setExerciciosSelecionados] = useState<string[]>([]);
+  const [grupoAtivo, setGrupoAtivo] = useState("Peito");
 
-  // Monitorar dados do Firebase
   useEffect(() => {
     if (auth.currentUser) {
       const unsub = onSnapshot(doc(db, "users", auth.currentUser.uid), (snapshot) => {
-        const data = snapshot.data();
-        if (data) {
-          setUserData(data);
-          // Lógica de Level Up baseada no XP total acumulado
-          if (data.xp >= 1000) {
-            handleLevelUp(data.level);
-          }
-        }
+        setUserData(snapshot.data());
       });
       return () => unsub();
     }
   }, []);
 
-  const handleLevelUp = async (currentLevel: number) => {
-    const userRef = doc(db, "users", auth.currentUser!.uid);
-    await updateDoc(userRef, {
-      level: increment(1),
-      xp: 0
-    });
-    Alert.alert("LEVEL UP! 🎊", `Você atingiu o nível ${currentLevel + 1}!`);
+  const getTreinoRank = (count: number) => {
+    if (count <= 3) return { label: 'RANK E', color: '#cbd5e1' }; // Cinza claro
+    if (count <= 5) return { label: 'RANK C', color: '#60a5fa' }; // Azul claro
+    if (count <= 7) return { label: 'RANK A', color: '#f87171' }; // Vermelho claro
+    return { label: 'RANK S', color: Colors.gold };
   };
 
-  const selecionarGrupo = (grupo: string) => {
-    setSelecionado(grupo);
-    setResultado(null);
-    ganharXp(50); // Ganha XP ao explorar um novo grupo
+  const toggleExercicio = (ex: string) => {
+    setExerciciosSelecionados(prev => 
+      prev.includes(ex) ? prev.filter(item => item !== ex) : [...prev, ex]
+    );
   };
 
-  const pesquisarTreino = () => {
-    const treino = treinosDetalhados[busca.toLowerCase().trim()];
-    if (treino) {
-      setResultado(treino);
-      setSelecionado(null);
-    } else {
-      Alert.alert("Busca", "Treino não encontrado na base detalhada.");
+  const salvarRotina = async () => {
+    if (!nomeRotina || exerciciosSelecionados.length === 0) {
+      return Alert.alert("Aviso", "Preencha o nome e selecione os exercícios.");
+    }
+    try {
+      const userRef = doc(db, "users", auth.currentUser!.uid);
+      const novaRotina = {
+        id: Date.now().toString(),
+        nome: nomeRotina,
+        exercicios: exerciciosSelecionados,
+        criadoEm: new Date().toISOString()
+      };
+      await updateDoc(userRef, { rotinasPersonalizadas: arrayUnion(novaRotina) });
+      setModalCriar(false);
+      setNomeRotina("");
+      setExerciciosSelecionados([]);
+    } catch (error) {
+      Alert.alert("Erro", "Falha ao sincronizar.");
     }
   };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.menuButton} onPress={() => setShowDrawer(true)}>
-        <Ionicons name="menu" size={28} color={Colors.gold} />
+        <Ionicons name="menu" size={36} color={Colors.gold} />
       </TouchableOpacity>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text style={styles.title}>🏋️ Treinos</Text>
-        
-        {/* Painel de Status do Jogador */}
-        <View style={styles.statusPanel}>
-          <View style={styles.statusItem}>
-            <Text style={styles.statusLabel}>NÍVEL</Text>
-            <Text style={styles.statusValue}>{userData?.level || nivel}</Text>
-          </View>
-          <View style={[styles.statusItem, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#333' }]}>
-            <Text style={styles.statusLabel}>RANK</Text>
-            <Text style={styles.statusValue}>{userData?.rank || rankAtual}</Text>
-          </View>
-          <View style={styles.statusItem}>
-            <Text style={styles.statusLabel}>XP</Text>
-            <Text style={styles.statusValue}>{userData?.xp || xp}/{userData?.xpNecessario || xpNecessario}</Text>
-          </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>GRIMÓRIO DE MISSÕES</Text>
+            <View style={styles.titleUnderline} />
         </View>
 
-        {/* Barra de Busca */}
-        <View style={styles.searchBox}>
-          <TextInput
-            style={styles.input}
-            placeholder="Pesquisar guia (ex: supino)"
-            value={busca}
-            onChangeText={setBusca}
-            placeholderTextColor="#666"
-          />
-          <TouchableOpacity style={styles.searchBtn} onPress={pesquisarTreino}>
-            <Ionicons name="search" size={20} color={Colors.charcoal} />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.sectionTitle}>Grupos Musculares</Text>
-        
-        {/* Grid de Grupos */}
-        <View style={styles.grid}>
-          {Object.keys(treinosPorGrupo).map((item) => (
-            <TouchableOpacity
-              key={item}
-              style={[styles.groupCard, selecionado === item && styles.groupCardActive]}
-              onPress={() => selecionarGrupo(item)}
-            >
-              <Ionicons 
-                name={selecionado === item ? "checkbox" : "barbell-outline"} 
-                size={24} 
-                color={selecionado === item ? Colors.charcoal : Colors.gold} 
-              />
-              <Text style={[styles.groupText, selecionado === item && styles.groupTextActive]}>
-                {item}
-              </Text>
+        {/* REGISTROS ATIVOS */}
+        <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>REGISTROS ATIVOS</Text>
+            <TouchableOpacity style={styles.addBtn} onPress={() => setModalCriar(true)}>
+                <Ionicons name="add" size={24} color={Colors.gold} />
+                <Text style={styles.addBtnText}>CRIAR</Text>
             </TouchableOpacity>
-          ))}
         </View>
 
-        {/* Área de Resultados */}
-        {(resultado || selecionado) && (
-          <View style={styles.resultContainer}>
-            <View style={styles.resultHeader}>
-              <Ionicons name="list" size={20} color={Colors.gold} />
-              <Text style={styles.resultTitle}>
-                {resultado ? "Passo a Passo" : `Exercícios: ${selecionado}`}
-              </Text>
-            </View>
-            
-            {(resultado || treinosPorGrupo[selecionado!]).map((item, i) => (
-              <View key={i} style={styles.resultItem}>
-                <Text style={styles.resultText}>• {item}</Text>
-              </View>
-            ))}
-
-            <TouchableOpacity 
-              style={styles.completeBtn} 
-              onPress={() => {
-                ganharXp(100);
-                Alert.alert("Treino Finalizado", "Você ganhou +100 XP!");
-              }}
-            >
-              <Text style={styles.completeBtnText}>FINALIZAR TREINO</Text>
-            </TouchableOpacity>
-          </View>
+        {userData?.rotinasPersonalizadas?.length > 0 ? (
+            userData.rotinasPersonalizadas.map((rotina: any) => {
+                const rank = getTreinoRank(rotina.exercicios.length);
+                return (
+                    <TouchableOpacity 
+                        key={rotina.id} 
+                        style={[styles.rotinaCard, { borderLeftColor: rank.color }]}
+                        onPress={() => setModalView(rotina)}
+                    >
+                        <View style={styles.rotinaMainInfo}>
+                            <Text style={[styles.rankText, { color: rank.color }]}>{rank.label}</Text>
+                            <Text style={styles.rotinaNome}>{rotina.nome.toUpperCase()}</Text>
+                            <Text style={styles.rotinaExCount}>{rotina.exercicios.length} EXERCÍCIOS</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={24} color="#555" />
+                    </TouchableOpacity>
+                );
+            })
+        ) : (
+            <Text style={styles.emptyText}>Nenhuma missão registrada...</Text>
         )}
+
+        <View style={styles.divider} />
+
+        {/* BIBLIOTECA */}
+        <Text style={styles.sectionTitle}>BIBLIOTECA DO SISTEMA</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
+            {Object.keys(exerciciosDisponiveis).map(grupo => (
+                <TouchableOpacity 
+                    key={grupo} 
+                    onPress={() => setGrupoAtivo(grupo)}
+                    style={[styles.tabItem, grupoAtivo === grupo && styles.tabItemActive]}
+                >
+                    <Text style={[styles.tabText, grupoAtivo === grupo && styles.tabTextActive]}>{grupo.toUpperCase()}</Text>
+                </TouchableOpacity>
+            ))}
+        </ScrollView>
+        
+        <View style={styles.libList}>
+            {exerciciosDisponiveis[grupoAtivo].map((ex, i) => (
+                <View key={ex} style={styles.libItem}>
+                    <Text style={styles.libIndex}>{i+1}</Text>
+                    <Text style={styles.libText}>{ex}</Text>
+                </View>
+            ))}
+        </View>
       </ScrollView>
+
+      {/* MODAL DE VISUALIZAÇÃO - FONTE GRANDE E CLARA */}
+      <Modal visible={!!modalView} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+            <View style={styles.viewModalContent}>
+                <View style={styles.viewModalHeader}>
+                    <View style={{flex: 1}}>
+                        <Text style={styles.viewModalSub}>DADOS DA MISSÃO</Text>
+                        <Text style={styles.viewModalTitle}>{modalView?.nome.toUpperCase()}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setModalView(null)} style={styles.closeBtn}>
+                        <Ionicons name="close-outline" size={35} color={Colors.gold} />
+                    </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.viewExList} showsVerticalScrollIndicator={false}>
+                    {modalView?.exercicios.map((ex: string, index: number) => (
+                        <View key={index} style={styles.viewExItem}>
+                            <View style={styles.viewExBadge}>
+                                <Text style={styles.viewExBadgeText}>{index + 1}</Text>
+                            </View>
+                            <Text style={styles.viewExText}>{ex}</Text>
+                        </View>
+                    ))}
+                </ScrollView>
+
+                <TouchableOpacity style={styles.startWorkoutBtn} onPress={() => setModalView(null)}>
+                    <Text style={styles.startWorkoutText}>INICIAR AGORA</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+      </Modal>
+
+      {/* MODAL CRIAR */}
+      <Modal visible={modalCriar} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>NOVA CONFIGURAÇÃO</Text>
+                <TextInput 
+                    style={styles.input}
+                    placeholder="NOME DA MISSÃO"
+                    placeholderTextColor="#666"
+                    value={nomeRotina}
+                    onChangeText={setNomeRotina}
+                />
+                <View style={styles.selectionArea}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {Object.entries(exerciciosDisponiveis).map(([grupo, lista]) => (
+                            <View key={grupo} style={{marginBottom: 20}}>
+                                <Text style={styles.grupoLabel}>{grupo}</Text>
+                                <View style={styles.chipContainer}>
+                                    {lista.map(ex => (
+                                        <TouchableOpacity 
+                                            key={ex} 
+                                            onPress={() => toggleExercicio(ex)}
+                                            style={[styles.chip, exerciciosSelecionados.includes(ex) && styles.chipActive]}
+                                        >
+                                            <Text style={[styles.chipText, exerciciosSelecionados.includes(ex) && styles.chipTextActive]}>{ex}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        ))}
+                    </ScrollView>
+                </View>
+                <View style={styles.modalFooter}>
+                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalCriar(false)}>
+                        <Text style={styles.cancelBtnText}>CANCELAR</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.saveBtn} onPress={salvarRotina}>
+                        <Text style={styles.saveBtnText}>SALVAR</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+      </Modal>
 
       <DrawerMenu visible={showDrawer} onClose={() => setShowDrawer(false)} />
     </View>
@@ -171,32 +222,68 @@ export default function TreinosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.charcoal, paddingHorizontal: 20, paddingTop: 60 },
-  menuButton: { position: "absolute", top: 50, left: 20, zIndex: 10 },
-  title: { color: Colors.gold, fontSize: 28, fontWeight: "900", textAlign: "center", marginBottom: 20, letterSpacing: 2 },
+  container: { flex: 1, backgroundColor: Colors.charcoal, paddingHorizontal: 20 },
+  menuButton: { marginTop: 50, marginBottom: 10 },
+  headerTitleContainer: { alignItems: 'center', marginBottom: 30 },
+  title: { color: Colors.gold, fontSize: 22, fontWeight: "900", letterSpacing: 2 },
+  titleUnderline: { height: 3, width: 60, backgroundColor: Colors.gold, marginTop: 5 },
   
-  statusPanel: { flexDirection: 'row', backgroundColor: '#1a1a1a', borderRadius: 15, padding: 15, marginBottom: 25, borderWidth: 1, borderColor: '#333' },
-  statusItem: { flex: 1, alignItems: 'center' },
-  statusLabel: { color: '#666', fontSize: 10, fontWeight: 'bold' },
-  statusValue: { color: Colors.gold, fontSize: 16, fontWeight: 'bold', marginTop: 4 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  sectionTitle: { color: Colors.gold, fontSize: 14, fontWeight: '900', letterSpacing: 1, opacity: 0.9 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#1a1a1a', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 8, borderWidth: 1, borderColor: Colors.gold },
+  addBtnText: { color: Colors.gold, fontWeight: 'bold', fontSize: 13 },
 
-  searchBox: { flexDirection: 'row', gap: 10, marginBottom: 25 },
-  input: { flex: 1, backgroundColor: '#1a1a1a', padding: 15, borderRadius: 12, color: Colors.cream, borderWidth: 1, borderColor: '#333' },
-  searchBtn: { backgroundColor: Colors.gold, width: 55, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  rotinaCard: { backgroundColor: '#111', borderRadius: 12, padding: 20, marginBottom: 15, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#222', borderLeftWidth: 6 },
+  rotinaMainInfo: { flex: 1 },
+  rankText: { fontSize: 12, fontWeight: '900', marginBottom: 4 },
+  rotinaNome: { color: '#FFF', fontWeight: 'bold', fontSize: 18, letterSpacing: 0.5 },
+  rotinaExCount: { color: '#888', fontSize: 13, fontWeight: '600', marginTop: 4 },
 
-  sectionTitle: { color: Colors.cream, fontSize: 18, fontWeight: 'bold', marginBottom: 15, marginLeft: 5 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  groupCard: { width: '48%', backgroundColor: '#1a1a1a', padding: 20, borderRadius: 15, marginBottom: 15, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
-  groupCardActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
-  groupText: { color: Colors.cream, fontWeight: 'bold', marginTop: 8 },
-  groupTextActive: { color: Colors.charcoal },
+  emptyText: { color: '#555', textAlign: 'center', marginTop: 20, fontSize: 16 },
+  divider: { height: 5, backgroundColor: '#e3a300', marginVertical: 30 },
 
-  resultContainer: { backgroundColor: '#1a1a1a', borderRadius: 20, padding: 20, marginTop: 10, borderWidth: 1, borderColor: Colors.gold },
-  resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 },
-  resultTitle: { color: Colors.gold, fontSize: 18, fontWeight: 'bold' },
-  resultItem: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#333' },
-  resultText: { color: Colors.cream, fontSize: 15 },
-  
-  completeBtn: { backgroundColor: Colors.gold, padding: 18, borderRadius: 12, marginTop: 20, alignItems: 'center' },
-  completeBtnText: { color: Colors.charcoal, fontWeight: '900', fontSize: 16 }
+  tabBar: { marginBottom: 20 },
+  tabItem: { paddingHorizontal: 20, paddingVertical: 12, marginRight: 10, borderRadius: 8, backgroundColor: '#111', borderWidth: 1, borderColor: '#333' },
+  tabItemActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  tabText: { color: '#888', fontWeight: 'bold', fontSize: 12 },
+  tabTextActive: { color: Colors.charcoal },
+
+  libList: { backgroundColor: '#000', borderRadius: 12, padding: 10 },
+  libItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#111', paddingHorizontal: 15 },
+  libIndex: { color: Colors.gold, fontSize: 14, fontWeight: 'bold', marginRight: 20 },
+  libText: { color: '#CCC', fontSize: 16, fontWeight: '500' },
+
+  // --- MODAL VISUALIZAÇÃO (MELHORADO) ---
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  viewModalContent: { backgroundColor: '#0a0a0a', borderRadius: 25, padding: 25, width: '92%', maxHeight: '85%', borderWidth: 1.5, borderColor: Colors.gold },
+  viewModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#333', paddingBottom: 20 },
+  viewModalSub: { color: '#888', fontSize: 12, fontWeight: 'bold', letterSpacing: 2 },
+  viewModalTitle: { color: '#FFF', fontSize: 26, fontWeight: '900', marginTop: 5 },
+  closeBtn: { padding: 5 },
+
+  viewExList: { marginVertical: 20 },
+  viewExItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#161616', padding: 20, borderRadius: 15, marginBottom: 12, borderWidth: 1, borderColor: '#222' },
+  viewExBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.gold, justifyContent: 'center', alignItems: 'center', marginRight: 18 },
+  viewExBadgeText: { color: Colors.charcoal, fontSize: 16, fontWeight: 'bold' },
+  viewExText: { color: '#EEE', fontSize: 19, flex: 1, fontWeight: '600' },
+
+  startWorkoutBtn: { backgroundColor: Colors.gold, padding: 20, borderRadius: 12, alignItems: 'center', marginTop: 10 },
+  startWorkoutText: { color: Colors.charcoal, fontWeight: '900', fontSize: 18, letterSpacing: 1 },
+
+  // --- MODAL CRIAR ---
+  modalContent: { backgroundColor: '#0a0a0a', borderRadius: 25, padding: 25, width: '92%', maxHeight: '80%', borderWidth: 1, borderColor: Colors.gold },
+  modalTitle: { color: Colors.gold, fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 20 },
+  input: { backgroundColor: '#111', color: '#FFF', padding: 18, borderRadius: 12, borderWidth: 1, borderColor: '#333', fontSize: 16, fontWeight: 'bold' },
+  selectionArea: { height: 380, marginVertical: 20 },
+  grupoLabel: { color: Colors.gold, fontSize: 13, fontWeight: 'bold', marginBottom: 12, textTransform: 'uppercase' },
+  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  chip: { backgroundColor: '#1a1a1a', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#333' },
+  chipActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  chipText: { color: '#AAA', fontSize: 14, fontWeight: '600' },
+  chipTextActive: { color: Colors.charcoal },
+  modalFooter: { flexDirection: 'row', gap: 15 },
+  cancelBtn: { flex: 1, padding: 18, alignItems: 'center' },
+  cancelBtnText: { color: '#888', fontWeight: 'bold', fontSize: 15 },
+  saveBtn: { flex: 2, backgroundColor: Colors.gold, padding: 18, borderRadius: 12, alignItems: 'center' },
+  saveBtnText: { color: Colors.charcoal, fontWeight: 'bold', fontSize: 16 }
 });

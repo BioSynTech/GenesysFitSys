@@ -54,7 +54,7 @@ export default function LeaderboardScreen() {
     <View style={styles.container}>
       {/* Botão do Menu Lateral */}
       <TouchableOpacity style={styles.menuButton} onPress={() => setShowDrawer(true)}>
-        <Ionicons name="menu" size={32} color="#FFD700" />
+        <Ionicons name="menu" size={38} color="#FFD700" />
       </TouchableOpacity>
 
       <View style={styles.header}>

@@ -59,7 +59,7 @@ export default function PontoScreen() {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.menuButton} onPress={() => setShowDrawer(true)}>
-        <Ionicons name="menu" size={32} color={Colors.gold} />
+        <Ionicons name="menu" size={38} color={Colors.gold} />
       </TouchableOpacity>
 
       <View style={styles.content}>
@@ -82,11 +82,11 @@ export default function PontoScreen() {
 
         <View style={styles.rewardsRow}>
             <View style={styles.rewardItem}>
-                <Ionicons name="flash" size={18} color={Colors.gold} />
+                <Ionicons name="sparkles" size={18} color={Colors.gold} />
                 <Text style={styles.rewardText}>+100 XP</Text>
             </View>
             <View style={styles.rewardItem}>
-                <Ionicons name="logo-bitcoin" size={18} color={Colors.gold} />
+                <Ionicons name="flash" size={18} color={Colors.gold} />
                 <Text style={styles.rewardText}>+50 Moedas</Text>
             </View>
         </View>

@@ -62,7 +62,7 @@ export default function RootLayout() {
       router.replace('/(tabs)');
     } else if (!isAuthenticated && inTabsGroup) {
       // Se deslogado e estiver nas abas, volta para o Login
-      router.replace('/');
+      router.replace('/(auth)/login');
     }
   }, [isAuthenticated, segments]);
 

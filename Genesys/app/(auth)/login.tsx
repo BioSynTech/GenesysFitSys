@@ -122,6 +122,8 @@ useEffect(() => {
       moedas: 0,
       streak: 0,
       rank: "Aprendiz",
+      biotipo: "Ectomorfo",
+             
       createdAt: new Date().toISOString()
     });
   };
@@ -249,7 +251,7 @@ const styles = StyleSheet.create({
   activeTabText: { color: '#ebd86e' },
   inputArea: { gap: 12 },
   inputBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 15, height: 60, backgroundColor: '#fff' },
-  inputField: { flex: 1, marginLeft: 12, fontSize: 16, color: '#c10000' },
+  inputField: { flex: 1, marginLeft: 12, fontSize: 16, color: '#0c0c0c' },
   mainButton: { backgroundColor: '#FFD700', height: 60, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 15 },
   buttonLabel: { color: '#122620', fontWeight: 'bold', fontSize: 16 },
   googleButton: { flexDirection: 'row', backgroundColor: '#fff', height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 10 },

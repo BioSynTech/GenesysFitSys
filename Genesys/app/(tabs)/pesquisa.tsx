@@ -79,7 +79,7 @@ export default function PesquisaScreen() {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.menuButton} onPress={() => setShowDrawer(true)}>
-        <Ionicons name="menu" size={32} color={Colors.gold} />
+        <Ionicons name="menu" size={38} color={Colors.gold} />
       </TouchableOpacity>
 
       <Text style={styles.title}>🔎 ENCICLOPÉDIA</Text>
