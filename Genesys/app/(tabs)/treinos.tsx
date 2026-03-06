@@ -32,12 +32,7 @@ interface Exercicio {
 export default function TreinosScreen() {
     SplashScreen.preventAutoHideAsync();
 
-    export default function TreinosScreen() {
-        // 1. CARREGAMENTO DA FONTE
-        const [fontsLoaded, fontError] = useFonts({
-            'Grimorio-Main': require('../../assets/fonts/SuaFonte.ttf'), // Nomeie como quiser
-            'Grimorio-Bold': require('../../assets/fonts/SuaFonte-Bold.ttf'),
-        });
+    // 1. CARREGAMENTO DA FONTE
         const auth = getAuth();
         const db = getFirestore();
         const [userData, setUserData] = useState<any>(null);
@@ -51,11 +46,6 @@ export default function TreinosScreen() {
         const [exerciciosSelecionados, setExerciciosSelecionados] = useState<Exercicio[]>([]);
         const [grupoAtivo, setGrupoAtivo] = useState("Peito");
 
-        useEffect(() => {
-            if (fontsLoaded || fontError) {
-                SplashScreen.hideAsync();
-            }
-        }, [fontsLoaded, fontError]);
 
         useEffect(() => {
             if (auth.currentUser) {
@@ -67,9 +57,6 @@ export default function TreinosScreen() {
         }, []);
 
         // Se as fontes não carregarem, não renderiza nada (evita erro)
-        if (!fontsLoaded && !fontError) {
-            return null;
-        }
 
 
         useEffect(() => {
@@ -394,11 +381,11 @@ export default function TreinosScreen() {
                     </View>
                 </Modal>
 
-                <DrawerMenu visible={showDrawer} onClose={() => setShowDrawer(false)} />
-            </View>
-        );
+                    <DrawerMenu visible={showDrawer} onClose={() => setShowDrawer(false)} />
+                </View>
+            );
     }
-
+    
     const styles = StyleSheet.create({
         container: { flex: 1, backgroundColor: Colors.charcoal, paddingHorizontal: 20 },
         menuButton: { marginTop: 50, marginBottom: 10 },

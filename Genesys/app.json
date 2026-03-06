@@ -7,19 +7,20 @@
     "icon": "./assets/images/Genesys_img.jpeg",
     "scheme": "genesys",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    //"newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.genesys.fitsys"
     },
     "android": {
       "package": "com.genesys.fitsys",
+      "versionCode": 4,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/Genesys_img.jpeg"
       },
-      "edgeToEdgeEnabled": true,
+      //"edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
